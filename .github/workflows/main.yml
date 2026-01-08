@@ -2,14 +2,14 @@ name: Update Software RSS
 
 on:
   schedule:
-    - cron: '0 12 * * *' # S'exécute tous les jours à midi
-  workflow_dispatch:      # Permet de le lancer à la main
+    - cron: '0 */12 * * *' # Toutes les 12 heures
+  workflow_dispatch:      # Activation manuelle
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write    # Donne l'autorisation de pousser le fichier XML
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,6 +29,6 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git add software_feed.xml
-          git commit -m "Mise à jour du flux RSS" || exit 0
-          git push
+          git add .
+          # On commit seulement s'il y a des changements pour éviter les erreurs
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Mise à jour du flux RSS" && git push)
