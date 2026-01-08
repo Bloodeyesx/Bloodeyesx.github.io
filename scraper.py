@@ -2,67 +2,63 @@ import requests
 from bs4 import BeautifulSoup
 import json
 from feedgen.feed import FeedGenerator
-import re
 
 def scrape_humble_software():
-    print("Début du scraping robuste...")
+    print("Début du scraping sur la version détectée...")
     url = "https://www.humblebundle.com/software"
-    # Headers plus complets pour simuler un vrai navigateur
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # RECHERCHE ROBUSTE : On cherche n'importe quel script qui contient "bundle_data"
-        json_data = None
-        scripts = soup.find_all('script')
-        for script in scripts:
-            if script.string and 'bundle_data' in script.string:
-                try:
-                    # On tente d'extraire le JSON brut du script
-                    json_data = json.loads(script.string)
-                    break
-                except:
-                    continue
-
-        if not json_data:
-            print("ERREUR : Impossible d'extraire les données JSON de la page.")
+        # Ciblage précis de la nouvelle balise ID identifiée dans ton code source
+        script_tag = soup.find('script', id='landingPage-json-data')
+        if not script_tag:
+            print("ERREUR : Balise 'landingPage-json-data' introuvable.")
             return
 
-        # Extraction selon la structure actuelle de Humble
-        bundles = json_data.get('content_index', {}).get('bundle_data', [])
-        if not bundles:
-            # Test d'une structure alternative
-            bundles = json_data.get('bundle_data', [])
-
-        if not bundles:
-            print("INFO : Aucun bundle trouvé dans les données extraites.")
+        json_data = json.loads(script_tag.string)
+        
+        # Accès au chemin spécifique des produits software
+        # Structure : data -> software -> mosaic -> [0] -> products
+        try:
+            software_data = json_data['data']['software']['mosaic']
+            products = software_data[0]['products']
+        except (KeyError, IndexError):
+            print("ERREUR : Impossible de naviguer dans la structure JSON.")
             return
 
         fg = FeedGenerator()
-        fg.id('https://www.humblebundle.com/software')
-        fg.title('Humble Software RSS')
-        fg.link(href='https://www.humblebundle.com/software', rel='alternate')
-        fg.description('Flux RSS automatisé pour Humble Software Bundles')
+        fg.id(url)
+        fg.title('Humble Software Bundles')
+        fg.link(href=url, rel='alternate')
+        fg.description('Dernières offres logicielles de Humble Bundle')
 
-        count = 0
-        for bundle in bundles:
-            name = bundle.get('bundle_name')
-            machine_name = bundle.get('machine_name')
-            if not machine_name: continue
-            
-            link = f"https://www.humblebundle.com/software/{machine_name}"
-            img = bundle.get('bundle_image_tile')
+        for item in products:
+            title = item.get('tile_name')
+            # Le product_url est souvent relatif (ex: /software/bundle-name)
+            link = "https://www.humblebundle.com" + item.get('product_url', '')
+            img = item.get('tile_image')
+            desc = item.get('short_marketing_blurb', 'Nouveau bundle disponible !')
 
             fe = fg.add_entry()
             fe.id(link)
-            fe.title(name)
+            fe.title(title)
             fe.link(href=link)
+            fe.description(f'<img src="{img}"><br>{desc}')
+
+        fg.rss_file('software_feed.xml')
+        print(f"SUCCÈS : {len(products)} bundles détectés et ajoutés au flux.")
+
+    except Exception as e:
+        print(f"ERREUR : {str(e)}")
+
+if __name__ == "__main__":
+    scrape_humble_software()            fe.link(href=link)
             fe.description(f'<img src="{img}"><br>Nouveau bundle disponible : {name}')
             count += 1
 
