@@ -1,4 +1,4 @@
-# 🎞️ Humble Software Tracker (Darkroom Edition)
+# 🎞️ Humble Software Tracker 
 
 > "Surveillance automatisée des bundles logiciels dans une chambre noire numérique."
 
@@ -68,19 +68,6 @@ Si vous souhaitez créer votre propre instance de ce tracker :
 * **Concept Original :** Inspiré par les outils de tracking open-source.
 * **Design & Code :** Refonte complète "Darkroom" (2026).
 * **Données :** Les informations et images des bundles appartiennent à Humble Bundle Inc. Ce projet est un outil de veille non-officiel.
-
----
-
-<div align="center">
-  <p><i>Développé avec ❤️ et du café noir.</i></p>
-</div>
----
-
-## 📝 Crédits
-
-* **Concept Original :** Inspiré par les travaux de la communauté open-source sur les RSS Humble Bundle.
-* **Design & Code :** Refonte complète "Darkroom" et optimisation du scraper Python (2026).
-* **Données :** Fournies par Humble Bundle Inc. (Ce projet n'est pas affilié à Humble Bundle).
 
 ---
 
