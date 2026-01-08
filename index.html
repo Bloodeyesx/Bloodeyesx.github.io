@@ -2,72 +2,37 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Humble Software Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #0f172a; color: #f8fafc; }
-        .bundle-card { background: #1e293b; transition: transform 0.2s; }
-        .bundle-card:hover { transform: translateY(-5px); border-color: #38bdf8; }
-    </style>
 </head>
-<body class="min-h-screen p-8">
-    <div class="max-w-4xl mx-auto">
-        <header class="flex justify-between items-center border-b border-slate-700 pb-6 mb-8">
-            <div>
-                <h1 class="text-3xl font-bold text-sky-400">Humble Software RSS</h1>
-                <p class="text-slate-400">Suivi automatisé des bundles logiciels</p>
+<body class="bg-slate-900 text-white p-8">
+    <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-4xl font-bold mb-4">Humble Software Tracker</h1>
+        <p class="mb-8 text-slate-400">Suivi en temps réel des offres logiciels.</p>
+        <div id="bundles" class="grid gap-6 md:grid-cols-2">
             </div>
-            <a href="software_feed.xml" class="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg font-medium transition">
-                S'abonner au Flux RSS
-            </a>
-        </header>
-
-        <div id="bundle-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <p class="text-slate-500 animate-pulse">Chargement des dernières offres...</p>
-        </div>
-
-        <footer class="mt-12 pt-8 border-t border-slate-700 text-center text-slate-500 text-sm">
-            Propulsé par GitHub Actions & Ton App Software RSS
-        </footer>
     </div>
 
     <script>
-        async function loadFeed() {
-            try {
-                const response = await fetch('software_feed.xml');
-                const str = await response.text();
-                const data = new window.DOMParser().parseFromString(str, "text/xml");
-                const items = data.querySelectorAll("item");
-                const list = document.getElementById('bundle-list');
-                
-                list.innerHTML = ""; // Vider le message de chargement
-
-                items.forEach(el => {
-                    const title = el.querySelector("title").innerHTML;
-                    const link = el.querySelector("link").innerHTML;
-                    const description = el.querySelector("description").textContent;
-                    
-                    // Extraction de l'image si présente dans la description
-                    const imgMatch = description.match(/src="([^"]+)"/);
-                    const imgSrc = imgMatch ? imgMatch[1] : 'https://via.placeholder.com/400x200?text=Humble+Bundle';
-
-                    const card = `
-                        <a href="${link}" target="_blank" class="bundle-card border border-slate-700 rounded-xl overflow-hidden block">
-                            <img src="${imgSrc}" alt="${title}" class="w-full h-48 object-cover">
-                            <div class="p-4">
-                                <h2 class="font-bold text-lg mb-2 text-slate-100">${title}</h2>
-                                <span class="text-sky-400 text-sm">Voir l'offre →</span>
-                            </div>
-                        </a>
-                    `;
-                    list.innerHTML += card;
+        fetch('software_feed.xml')
+            .then(res => res.text())
+            .then(data => {
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(data, "text/xml");
+                const items = xml.querySelectorAll("item");
+                let html = "";
+                items.forEach(item => {
+                    const title = item.querySelector("title").textContent;
+                    const link = item.querySelector("link").textContent;
+                    html += `
+                        <div class="bg-slate-800 p-4 rounded-lg shadow-lg">
+                            <h2 class="font-bold text-xl">${title}</h2>
+                            <a href="${link}" target="_blank" class="text-blue-400 hover:underline">Voir l'offre →</a>
+                        </div>`;
                 });
-            } catch (error) {
-                document.getElementById('bundle-list').innerHTML = "<p class='text-red-400'>Erreur lors du chargement du flux. Vérifiez que software_feed.xml existe.</p>";
-            }
-        }
-        loadFeed();
+                document.getElementById('bundles').innerHTML = html || "<p>Aucun bundle trouvé.</p>";
+            })
+            .catch(() => document.getElementById('bundles').innerHTML = "Erreur : Flux RSS non trouvé. Lancez l'Action GitHub !");
     </script>
 </body>
 </html>
