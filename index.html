@@ -2,15 +2,104 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Humble Software Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Configuration Darkroom */
+        :root {
+            --bg-color: #0a0a0a;
+            --card-bg: #171717;
+            --accent-red: #ef4444; /* Rouge chambre noire */
+            --text-main: #e5e5e5;
+            --border-color: #333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace; /* Police technique */
+        }
+
+        /* Effet de grain photo subtil sur le fond */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .bundle-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* L'effet de survol "Développement" */
+        .bundle-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-red);
+            box-shadow: 0 10px 30px -10px rgba(239, 68, 68, 0.3); /* Lueur rouge */
+        }
+
+        .bundle-card::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: var(--accent-red);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .bundle-card:hover::after {
+            transform: scaleX(1);
+        }
+
+        .badge-film {
+            background: var(--accent-red);
+            color: black;
+            font-weight: bold;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+    </style>
 </head>
-<body class="bg-slate-900 text-white p-8">
-    <div class="max-w-4xl mx-auto text-center">
-        <h1 class="text-4xl font-bold mb-4">Humble Software Tracker</h1>
-        <p class="mb-8 text-slate-400">Suivi en temps réel des offres logiciels.</p>
-        <div id="bundles" class="grid gap-6 md:grid-cols-2">
+<body class="min-h-screen p-6 md:p-12">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="flex flex-col md:flex-row justify-between items-end border-b border-neutral-800 pb-6 mb-12">
+            <div>
+                <h1 class="text-4xl font-bold tracking-tighter text-white mb-2">
+                    DARKROOM <span class="text-red-500">TRACKER</span>
+                </h1>
+                <p class="text-neutral-500 text-sm uppercase tracking-widest">
+                    Surveillance automatisée // Humble Bundle
+                </p>
             </div>
+            <div class="mt-4 md:mt-0">
+                <a href="software_feed.xml" target="_blank" class="inline-flex items-center text-xs font-bold text-red-500 hover:text-white transition border border-red-900 hover:border-red-500 px-4 py-2 rounded uppercase tracking-widest">
+                    <span class="mr-2">●</span> Flux RSS Live
+                </a>
+            </div>
+        </header>
+
+        <div id="bundles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="col-span-full text-center py-20 animate-pulse text-neutral-600">
+                [CHARGEMENT DES DONNÉES EN COURS...]
+            </div>
+        </div>
+
+        <footer class="mt-20 text-center text-neutral-700 text-xs uppercase tracking-widest">
+            <p>Système généré par GitHub Actions • <span id="last-update">Mise à jour automatique</span></p>
+        </div>
     </div>
 
     <script>
@@ -20,19 +109,53 @@
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(data, "text/xml");
                 const items = xml.querySelectorAll("item");
-                let html = "";
+                const container = document.getElementById('bundles');
+                
+                container.innerHTML = ""; // Vider le loader
+
+                if(items.length === 0) {
+                    container.innerHTML = "<p class='text-center col-span-full text-red-500'>[AUCUN SIGNAL DÉTECTÉ]</p>";
+                    return;
+                }
+
                 items.forEach(item => {
                     const title = item.querySelector("title").textContent;
                     const link = item.querySelector("link").textContent;
-                    html += `
-                        <div class="bg-slate-800 p-4 rounded-lg shadow-lg">
-                            <h2 class="font-bold text-xl">${title}</h2>
-                            <a href="${link}" target="_blank" class="text-blue-400 hover:underline">Voir l'offre →</a>
-                        </div>`;
+                    // Extraction propre de l'image et du texte
+                    const rawDesc = item.querySelector("description").textContent;
+                    const imgMatch = rawDesc.match(/src="([^"]+)"/);
+                    const imgSrc = imgMatch ? imgMatch[1] : '';
+                    // Nettoyage de la description pour enlever les balises HTML
+                    let textDesc = rawDesc.replace(/<[^>]*>/g, '').replace('Nouveau bundle disponible :', '').trim();
+
+                    const card = `
+                        <article class="bundle-card group">
+                            <div class="relative overflow-hidden aspect-video bg-neutral-900 border-b border-neutral-800">
+                                <img src="${imgSrc}" alt="${title}" class="object-cover w-full h-full opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500 grayscale group-hover:grayscale-0">
+                                <div class="absolute top-2 left-2">
+                                    <span class="badge-film">NEW</span>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <h2 class="text-lg font-bold text-white mb-2 leading-tight group-hover:text-red-500 transition">${title}</h2>
+                                <p class="text-neutral-500 text-xs mb-6 line-clamp-2 font-sans">${textDesc}</p>
+                                <a href="${link}" target="_blank" class="block w-full text-center py-3 border border-neutral-700 hover:bg-white hover:text-black hover:border-white transition text-xs font-bold uppercase tracking-widest">
+                                    Examiner la planche
+                                </a>
+                            </div>
+                        </article>
+                    `;
+                    container.innerHTML += card;
                 });
-                document.getElementById('bundles').innerHTML = html || "<p>Aucun bundle trouvé.</p>";
+                
+                // Date de mise à jour
+                const now = new Date();
+                document.getElementById('last-update').textContent = "Dernier scan : " + now.toLocaleTimeString();
             })
-            .catch(() => document.getElementById('bundles').innerHTML = "Erreur : Flux RSS non trouvé. Lancez l'Action GitHub !");
+            .catch(err => {
+                console.error(err);
+                document.getElementById('bundles').innerHTML = "<div class='col-span-full text-center p-10 border border-red-900 text-red-500'>ERREUR CRITIQUE: IMPOSSIBLE DE LIRE LE FLUX</div>";
+            });
     </script>
 </body>
 </html>
