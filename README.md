@@ -1,4 +1,4 @@
-# 🎞️ Humble Software Tracker (Darkroom Edition)
+# 🎞️ Humble Software Tracker 
 
 > "Surveillance automatisée des bundles logiciels dans une chambre noire numérique."
 
