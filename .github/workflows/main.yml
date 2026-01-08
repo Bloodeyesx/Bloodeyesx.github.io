@@ -1,0 +1,34 @@
+name: Update Software RSS
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # S'exécute tous les jours à midi
+  workflow_dispatch:      # Permet de le lancer à la main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 feedgen
+
+      - name: Run Scraper
+        run: python scraper.py
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add software_feed.xml
+          git commit -m "Mise à jour du flux RSS" || exit 0
+          git push
