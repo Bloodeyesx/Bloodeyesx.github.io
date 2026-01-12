@@ -74,9 +74,9 @@
 </head>
 <body class="min-h-screen p-6 md:p-12">
 
-    <div class="max-w-6xl mx-auto">
-        <header class="flex flex-col md:flex-row justify-between items-end border-b border-neutral-800 pb-6 mb-12">
-            <div>
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col lg:flex-row justify-between items-end border-b border-neutral-800 pb-6 mb-12 gap-6">
+            <div class="w-full lg:w-auto">
                 <h1 class="text-4xl font-bold tracking-tighter text-white mb-2">
                     DARKROOM <span class="text-red-500">TRACKER</span>
                 </h1>
@@ -84,27 +84,68 @@
                     Surveillance automatisée // Humble Bundle
                 </p>
             </div>
-            <div class="mt-4 md:mt-0">
-                <a href="software_feed.xml" target="_blank" class="inline-flex items-center text-xs font-bold text-red-500 hover:text-white transition border border-red-900 hover:border-red-500 px-4 py-2 rounded uppercase tracking-widest">
-                    <span class="mr-2">●</span> Flux RSS Live
+
+            <div class="flex-grow flex justify-start lg:justify-end w-full lg:w-auto lg:mr-8">
+                <div class="border border-neutral-800 bg-neutral-900/50 px-4 py-2 rounded flex items-center gap-3 font-mono text-sm shadow-sm">
+                    <div class="flex flex-col items-end">
+                        <span id="date-display" class="text-neutral-500 text-[10px] tracking-widest uppercase">YYYY-MM-DD</span>
+                        <span id="time-display" class="text-white font-bold text-xl leading-none tracking-tight">00:00:00</span>
+                    </div>
+                    <div class="h-8 w-[1px] bg-red-500/50 mx-1"></div>
+                    <div class="text-[10px] text-red-500 font-bold uppercase tracking-widest rotate-180 writing-vertical-rl" style="writing-mode: vertical-rl;">
+                        LIVE
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-auto">
+                <a href="software_feed.xml" target="_blank" class="flex justify-center lg:inline-flex items-center text-xs font-bold text-red-500 hover:text-white transition border border-red-900 hover:border-red-500 px-6 py-3 rounded uppercase tracking-widest w-full lg:w-auto">
+                    <span class="mr-2 animate-pulse">●</span> Flux RSS
                 </a>
             </div>
         </header>
 
-        <div id="bundles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div class="col-span-full text-center py-20 animate-pulse text-neutral-600">
-                [CHARGEMENT DES DONNÉES EN COURS...]
+        <div id="bundles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div class="col-span-full text-center py-32 animate-pulse text-neutral-600 font-mono tracking-widest border border-dashed border-neutral-800 rounded">
+                [...INITIALISATION DU SCAN...]
             </div>
         </div>
 
-        <footer class="mt-20 text-center text-neutral-700 text-xs uppercase tracking-widest">
-            <p>Système généré par GitHub Actions • <span id="last-update">Mise à jour automatique</span></p>
-        </div>
+        <footer class="mt-20 border-t border-neutral-900 pt-8 text-center text-neutral-600 text-[10px] uppercase tracking-[0.2em]">
+            <p>Système généré par GitHub Actions • <span id="last-update" class="text-neutral-500">En attente</span></p>
+        </footer>
     </div>
 
     <script>
+        // 1. GESTION DE L'HORLOGE TACTIQUE
+        function updateSystemClock() {
+            const now = new Date();
+            
+            // Format Date ISO (ex: 2026-01-12)
+            const dateStr = now.toISOString().split('T')[0];
+            
+            // Format Heure (ex: 23:45:12)
+            const timeStr = now.toLocaleTimeString('fr-FR', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+
+            document.getElementById('date-display').textContent = dateStr;
+            document.getElementById('time-display').textContent = timeStr;
+        }
+
+        // Lancement immédiat et intervalle
+        updateSystemClock();
+        setInterval(updateSystemClock, 1000);
+
+        // 2. GESTION DU FLUX RSS
         fetch('software_feed.xml')
-            .then(res => res.text())
+            .then(res => {
+                if (!res.ok) throw new Error("Fichier XML introuvable");
+                return res.text();
+            })
             .then(data => {
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(data, "text/xml");
@@ -114,33 +155,45 @@
                 container.innerHTML = ""; // Vider le loader
 
                 if(items.length === 0) {
-                    container.innerHTML = "<p class='text-center col-span-full text-red-500'>[AUCUN SIGNAL DÉTECTÉ]</p>";
+                    container.innerHTML = "<div class='col-span-full py-20 text-center border border-red-900/30 bg-red-900/10 text-red-500 tracking-widest'>[AUCUN SIGNAL DÉTECTÉ]</div>";
                     return;
                 }
 
                 items.forEach(item => {
                     const title = item.querySelector("title").textContent;
                     const link = item.querySelector("link").textContent;
+                    
                     // Extraction propre de l'image et du texte
                     const rawDesc = item.querySelector("description").textContent;
                     const imgMatch = rawDesc.match(/src="([^"]+)"/);
                     const imgSrc = imgMatch ? imgMatch[1] : '';
-                    // Nettoyage de la description pour enlever les balises HTML
-                    let textDesc = rawDesc.replace(/<[^>]*>/g, '').replace('Nouveau bundle disponible :', '').trim();
+                    
+                    // Nettoyage de la description
+                    let textDesc = rawDesc.replace(/<[^>]*>/g, '')
+                                          .replace('Nouveau bundle disponible !', '')
+                                          .replace('New bundle available!', '')
+                                          .trim();
+
+                    if (!textDesc) textDesc = "Aucune description disponible pour ce bundle.";
 
                     const card = `
-                        <article class="bundle-card group">
+                        <article class="bundle-card group flex flex-col h-full">
                             <div class="relative overflow-hidden aspect-video bg-neutral-900 border-b border-neutral-800">
-                                <img src="${imgSrc}" alt="${title}" class="object-cover w-full h-full opacity-80 group-hover:opacity-100 group-hover:scale-105 transition duration-500 grayscale group-hover:grayscale-0">
+                                <img src="${imgSrc}" alt="${title}" class="object-cover w-full h-full opacity-60 group-hover:opacity-100 group-hover:scale-105 transition duration-700 ease-out grayscale group-hover:grayscale-0">
                                 <div class="absolute top-2 left-2">
-                                    <span class="badge-film">NEW</span>
+                                    <span class="badge-film shadow-lg shadow-red-900/50">DETECTED</span>
                                 </div>
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-100"></div>
                             </div>
-                            <div class="p-6">
-                                <h2 class="text-lg font-bold text-white mb-2 leading-tight group-hover:text-red-500 transition">${title}</h2>
-                                <p class="text-neutral-500 text-xs mb-6 line-clamp-2 font-sans">${textDesc}</p>
-                                <a href="${link}" target="_blank" class="block w-full text-center py-3 border border-neutral-700 hover:bg-white hover:text-black hover:border-white transition text-xs font-bold uppercase tracking-widest">
-                                    Examiner la planche
+                            
+                            <div class="p-5 flex flex-col flex-grow relative">
+                                <div class="absolute top-0 right-5 h-[1px] w-10 bg-neutral-700 group-hover:bg-red-500 transition-colors"></div>
+                                
+                                <h2 class="text-base font-bold text-white mb-2 leading-tight group-hover:text-red-500 transition line-clamp-2 min-h-[2.5rem]">${title}</h2>
+                                <p class="text-neutral-500 text-xs mb-6 line-clamp-3 font-sans leading-relaxed flex-grow border-l-2 border-neutral-800 pl-3 group-hover:border-red-500/30 transition-colors">${textDesc}</p>
+                                
+                                <a href="${link}" target="_blank" class="mt-auto block w-full text-center py-3 border border-neutral-700 hover:bg-neutral-800 hover:text-white hover:border-neutral-500 transition text-[10px] font-bold uppercase tracking-[0.15em] relative overflow-hidden">
+                                    <span class="relative z-10">Examiner la planche ></span>
                                 </a>
                             </div>
                         </article>
@@ -148,13 +201,17 @@
                     container.innerHTML += card;
                 });
                 
-                // Date de mise à jour
+                // Date de mise à jour du scan (Statique, basée sur le chargement de la page)
                 const now = new Date();
                 document.getElementById('last-update').textContent = "Dernier scan : " + now.toLocaleTimeString();
             })
             .catch(err => {
                 console.error(err);
-                document.getElementById('bundles').innerHTML = "<div class='col-span-full text-center p-10 border border-red-900 text-red-500'>ERREUR CRITIQUE: IMPOSSIBLE DE LIRE LE FLUX</div>";
+                document.getElementById('bundles').innerHTML = `
+                    <div class='col-span-full text-center py-20 border border-dashed border-red-900/50 text-red-500/80'>
+                        <p class="font-bold text-lg mb-2">ERREUR CRITIQUE</p>
+                        <p class="text-xs font-mono">IMPOSSIBLE DE LIRE LE FLUX RSS (software_feed.xml)</p>
+                    </div>`;
             });
     </script>
 </body>
