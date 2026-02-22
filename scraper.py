@@ -1,18 +1,14 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-import os
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
-from tinydb import TinyDB, Query # <-- Added TinyDB
+from tinydb import TinyDB, Query
 
 def scrape_humble_software():
-    print("Starting scrape...")
+    print("📸 Initializing Darkroom Scan...")
     url = "https://www.humblebundle.com/software"
-    db_file = 'bundles_db.json'
-    
-    # Initialize TinyDB
-    db = TinyDB(db_file)
+    db = TinyDB('bundles_db.json')
     Bundle = Query()
 
     headers = {
@@ -25,24 +21,14 @@ def scrape_humble_software():
         soup = BeautifulSoup(response.text, 'html.parser')
         
         script_tag = soup.find('script', id='landingPage-json-data')
-        if not script_tag:
-            print("ERROR: 'landingPage-json-data' tag not found.")
-            return
-
         json_data = json.loads(script_tag.string)
-        
-        try:
-            products = json_data['data']['software']['mosaic'][0]['products']
-        except (KeyError, IndexError, TypeError):
-            print("ERROR: Invalid JSON structure or no products found.")
-            return
+        products = json_data['data']['software']['mosaic'][0]['products']
 
         fg = FeedGenerator()
         fg.id(url)
         fg.title('Humble Software Bundles')
         fg.link(href=url, rel='alternate')
         fg.description('Latest software offers from Humble Bundle')
-        fg.language('en')
         fg.lastBuildDate(datetime.now(timezone.utc))
 
         for item in products:
@@ -50,41 +36,39 @@ def scrape_humble_software():
             title = item.get('tile_name')
             link = "https://www.humblebundle.com" + item.get('product_url', '')
             img = item.get('tile_image')
-            desc = item.get('short_marketing_blurb', 'New bundle available!')
+            desc = item.get('short_marketing_blurb', 'New bundle detected.')
 
-            # --- TINYDB STATE LOGIC ---
-            existing_entry = db.search(Bundle.id == unique_id)
+            # Check if we already have this in the archive
+            existing = db.search(Bundle.id == unique_id)
             
-            if not existing_entry:
-                # First time seeing this bundle
+            if not existing:
                 pub_date = datetime.now(timezone.utc).isoformat()
+                # Store EVERYTHING the UI needs
                 db.insert({
                     'id': unique_id,
                     'title': title,
-                    'published_at': pub_date,
-                    'last_seen': pub_date
+                    'link': link,
+                    'image': img,
+                    'description': desc,
+                    'published_at': pub_date
                 })
-                print(f"🆕 New entry logged: {title}")
+                print(f"➕ New entry exposed: {title}")
             else:
-                # Already exists, keep the original published date
-                pub_date = existing_entry[0]['published_at']
-                db.update({'last_seen': datetime.now(timezone.utc).isoformat()}, Bundle.id == unique_id)
-            # ---------------------------
+                pub_date = existing[0]['published_at']
 
+            # Update RSS Feed
             fe = fg.add_entry()
             fe.id(unique_id)
             fe.title(title)
             fe.link(href=link)
             fe.description(f'<img src="{img}"><br>{desc}')
-            
-            # Use the stored date so RSS readers don't get duplicates
             fe.published(datetime.fromisoformat(pub_date))
 
         fg.rss_file('software_feed.xml')
-        print(f"SUCCESS: {len(products)} bundles processed. Database updated.")
+        print(f"✔️ Scan complete. {len(products)} items in current archive.")
 
     except Exception as e:
-        print(f"ERROR: {str(e)}")
+        print(f"❌ SCAN ERROR: {str(e)}")
 
 if __name__ == "__main__":
     scrape_humble_software()
