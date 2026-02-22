@@ -15,19 +15,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1 # Shallow clone to save time/bandwidth
+          fetch-depth: 1
 
       - name: Setup Python
-        uses: actions/setup-python@v5 # Upgraded to v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-          cache: 'pip' # Automatically caches pip dependencies
+          cache: 'pip'
 
       - name: Install dependencies
-        # Using a conditional install: if cache hits, this is nearly instant
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 feedgen
+          # Added tinydb here
+          pip install requests beautifulsoup4 feedgen tinydb
 
       - name: Run Scraper
         run: python scraper.py
@@ -37,11 +37,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Only commit if there are actual changes in the workspace
+          # This adds software_feed.xml AND the new bundles_db.json
           git add .
+          
           if git diff --staged --quiet; then
-            echo "No changes detected in RSS feed. Skipping push."
+            echo "No changes detected. Skipping push."
           else
-            git commit -m "Auto-update: RSS Feed $(date +'%Y-%m-%d %H:%M')"
+            git commit -m "Auto-update: RSS Feed & DB $(date +'%Y-%m-%d %H:%M')"
             git push
           fi
