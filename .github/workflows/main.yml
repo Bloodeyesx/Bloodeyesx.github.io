@@ -2,8 +2,8 @@ name: Update Software RSS
 
 on:
   schedule:
-    - cron: '0 */12 * * *' # Runs every 12 hours
-  workflow_dispatch:      # Allows manual trigger button
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -24,10 +22,7 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # Added tinydb here
-          pip install requests beautifulsoup4 feedgen tinydb
+        run: pip install requests beautifulsoup4 feedgen tinydb
 
       - name: Run Scraper
         run: python scraper.py
@@ -36,13 +31,8 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # This adds software_feed.xml AND the new bundles_db.json
           git add .
-          
-          if git diff --staged --quiet; then
-            echo "No changes detected. Skipping push."
-          else
-            git commit -m "Auto-update: RSS Feed & DB $(date +'%Y-%m-%d %H:%M')"
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-update: RSS Feed & Archive $(date +'%Y-%m-%d %H:%M')"
             git push
           fi
