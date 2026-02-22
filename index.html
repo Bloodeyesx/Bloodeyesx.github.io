@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Humble Software Tracker // Darkroom Edition</title>
+    <title>Humble Software Tracker // Darkroom State</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
@@ -19,14 +19,17 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             font-family: 'JetBrains Mono', monospace;
+            overflow-x: hidden;
         }
 
+        /* Subtile Film Grain Effect */
         body::before {
             content: "";
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-            pointer-events: none; z-index: -1;
+            pointer-events: none;
+            z-index: 50;
         }
 
         .bundle-card {
@@ -38,7 +41,7 @@
         .bundle-card:hover {
             transform: translateY(-8px);
             border-color: var(--accent-red);
-            box-shadow: 0 20px 40px -20px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 20px 40px -20px rgba(239, 68, 68, 0.3);
         }
 
         .badge-new {
@@ -48,10 +51,15 @@
         }
 
         @keyframes pulse-red {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #262626; }
+        ::-webkit-scrollbar-thumb:hover { background: #ef4444; }
     </style>
 </head>
 <body class="min-h-screen p-6 md:p-12">
@@ -59,87 +67,129 @@
     <div class="max-w-7xl mx-auto">
         <header class="flex flex-col lg:flex-row justify-between items-end border-b border-neutral-800 pb-10 mb-12 gap-6">
             <div>
-                <h1 class="text-5xl font-bold tracking-tighter text-white mb-2">
-                    DARKROOM <span class="text-red-600">STATE</span>
+                <h1 class="text-5xl font-bold tracking-tighter text-white mb-2 uppercase">
+                    Darkroom <span class="text-red-600">State</span>
                 </h1>
-                <p class="text-neutral-500 text-xs uppercase tracking-[0.3em]">
-                    Archive de surveillance // n° <span id="bundle-count">00</span>
+                <p class="text-neutral-500 text-[10px] uppercase tracking-[0.4em] font-bold">
+                    Archive de surveillance // n° <span id="bundle-count" class="text-red-500">00</span>
                 </p>
             </div>
 
-            <div class="flex items-center gap-6">
-                <div class="hidden md:flex border border-neutral-800 bg-neutral-900/30 px-4 py-2 rounded items-center gap-4">
+            <div class="flex items-center gap-6 w-full lg:w-auto">
+                <div class="flex-grow md:flex-initial border border-neutral-800 bg-neutral-900/30 px-5 py-3 rounded flex items-center gap-4">
                     <div class="text-right">
-                        <span id="date-display" class="block text-neutral-500 text-[10px] tracking-widest">0000.00.00</span>
-                        <span id="time-display" class="block text-white font-bold text-lg leading-none mt-1">00:00:00</span>
+                        <span id="date-display" class="block text-neutral-600 text-[10px] tracking-widest font-bold">0000.00.00</span>
+                        <span id="time-display" class="block text-white font-bold text-xl leading-none mt-1 tracking-tighter">00:00:00</span>
                     </div>
-                    <div class="w-[2px] h-8 bg-red-600/40"></div>
+                    <div class="w-[2px] h-10 bg-red-600/40"></div>
+                    <div class="text-[9px] text-red-500 font-bold uppercase tracking-widest leading-tight">
+                        Live<br>Feed
+                    </div>
                 </div>
-                <a href="software_feed.xml" class="text-[10px] font-bold text-red-500 border border-red-900/50 px-5 py-3 rounded uppercase tracking-widest hover:bg-red-500 hover:text-black transition-all">
-                    Feed RSS
+                <a href="software_feed.xml" target="_blank" class="text-[10px] font-bold text-neutral-400 border border-neutral-800 px-6 py-4 rounded uppercase tracking-[0.2em] hover:bg-red-600 hover:text-black hover:border-red-600 transition-all duration-300">
+                    RSS
                 </a>
             </div>
         </header>
 
-        <div id="bundles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-            <div class="col-span-full py-40 text-center text-neutral-700 uppercase tracking-widest border border-dashed border-neutral-900">
-                Développement du négatif en cours...
+        <div id="bundles-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div class="col-span-full py-40 text-center border border-dashed border-neutral-900 rounded-lg">
+                <span class="text-neutral-700 uppercase tracking-[0.5em] animate-pulse text-xs">Initialisation du scan négatif...</span>
             </div>
         </div>
 
-        <footer class="mt-32 border-t border-neutral-900 pt-10 text-center font-mono">
-            <p class="text-neutral-600 text-[9px] uppercase tracking-[0.4em]">
-                Exposition : <span id="last-scan-time" class="text-neutral-400">---</span> • Status : Connecté
+        <footer class="mt-32 border-t border-neutral-900 pt-10 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-neutral-600 text-[9px] uppercase tracking-[0.3em]">
+                Exposition : <span id="last-scan-time" class="text-neutral-400 italic">En attente</span>
+            </p>
+            <p class="text-neutral-700 text-[9px] uppercase tracking-[0.3em]">
+                &copy; 2026 Mrigua Brothers • System Active
             </p>
         </footer>
     </div>
 
     <script>
-        // 1. Horloge System
-        function tick() {
+        // 1. Tactical Clock logic
+        function updateClock() {
             const now = new Date();
             document.getElementById('date-display').textContent = now.toISOString().split('T')[0].replace(/-/g, '.');
             document.getElementById('time-display').textContent = now.toLocaleTimeString('fr-FR', {hour12:false});
         }
-        setInterval(tick, 1000); tick();
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        // 2. Logique de Données (TinyDB JSON)
-        async function loadArchive() {
+        // 2. Data Retrieval Logic (TinyDB)
+        async function fetchBundles() {
+            const container = document.getElementById('bundles-container');
+            
             try {
                 const response = await fetch('bundles_db.json');
+                if (!response.ok) throw new Error('DB_LOAD_FAIL');
+                
                 const data = await response.json();
                 
-                // TinyDB structure is typically {_default: {1: {}, 2: {}}}
-                const bundles = Object.values(data._default).reverse(); // Newest first
-                
-                const container = document.getElementById('bundles');
+                // Extract bundles from TinyDB _default table and sort newest first
+                const bundles = Object.values(data._default).sort((a, b) => 
+                    new Date(b.published_at) - new Date(a.published_at)
+                );
+
                 document.getElementById('bundle-count').textContent = bundles.length.toString().padStart(2, '0');
                 container.innerHTML = "";
 
+                if (bundles.length === 0) {
+                    container.innerHTML = `<div class="col-span-full py-20 text-center text-red-900 uppercase tracking-widest border border-red-950/30">Signal Perdu : Aucun bundle en archive</div>`;
+                    return;
+                }
+
                 bundles.forEach(bundle => {
-                    // Calcul si "Nouveau" (Moins de 48h)
                     const pubDate = new Date(bundle.published_at);
-                    const isNew = (new Date() - pubDate) < (48 * 60 * 60 * 1000);
-                    
-                    // Note: You'll need to pass the description/image from the scraper 
-                    // or fetch them from the RSS if the DB only has metadata.
-                    // Assuming your scraper now saves title/link/img/desc to the DB:
-                    
+                    const isNew = (new Date() - pubDate) < (48 * 60 * 60 * 1000); // 48h window
+
                     const card = `
-                        <article class="bundle-card group flex flex-col h-full bg-neutral-900/20">
-                            <div class="relative aspect-[16/9] overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-700">
-                                <img src="https://www.humblebundle.com/product_url_image_placeholder" 
-                                     class="object-cover w-full h-full opacity-40 group-hover:opacity-100 group-hover:scale-110 transition duration-700">
-                                ${isNew ? '<span class="absolute top-4 left-4 badge-new px-3 py-1 text-[9px] font-bold uppercase tracking-tighter">New Entry</span>' : ''}
-                                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent"></div>
+                        <article class="bundle-card group flex flex-col h-full overflow-hidden">
+                            <div class="relative aspect-video bg-black border-b border-neutral-800 overflow-hidden">
+                                <img src="${bundle.image || 'https://via.placeholder.com/400x225/111/444?text=IMAGE+LOST'}" 
+                                     alt="${bundle.title}" 
+                                     class="object-cover w-full h-full opacity-30 group-hover:opacity-100 group-hover:scale-105 transition duration-1000 ease-out grayscale group-hover:grayscale-0"
+                                     onerror="this.src='https://via.placeholder.com/400x225/111/444?text=IMAGE+ERR'">
+                                
+                                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent opacity-80"></div>
+                                
+                                ${isNew ? `
+                                    <div class="absolute top-3 left-3 z-20">
+                                        <span class="badge-new px-2 py-0.5 text-[8px] font-black uppercase tracking-tighter shadow-xl">New Entry</span>
+                                    </div>
+                                ` : ''}
+                                
+                                <div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div class="w-8 h-8 border border-red-500/50 flex items-center justify-center">
+                                        <div class="w-1 h-1 bg-red-500 animate-ping"></div>
+                                    </div>
+                                </div>
                             </div>
                             
-                            <div class="p-6 flex flex-col flex-grow">
-                                <span class="text-[9px] text-neutral-600 font-bold mb-3 uppercase tracking-widest">ID: ${bundle.id.substring(0, 15)}...</span>
-                                <h2 class="text-lg font-bold text-white mb-4 leading-tight group-hover:text-red-500 transition-colors">${bundle.title}</h2>
-                                <div class="mt-auto pt-6 flex justify-between items-center border-t border-neutral-800">
-                                    <span class="text-[9px] text-neutral-500 uppercase">${new Date(bundle.published_at).toLocaleDateString()}</span>
-                                    <a href="https://www.humblebundle.com/software" target="_blank" class="text-[10px] text-red-500 font-bold hover:tracking-widest transition-all uppercase">Ouvrir</a>
+                            <div class="p-6 flex flex-col flex-grow relative bg-neutral-900/10">
+                                <div class="text-[8px] text-neutral-700 font-bold mb-3 uppercase tracking-[0.2em] flex justify-between">
+                                    <span>ID: ${bundle.id.substring(0, 12)}</span>
+                                    <span class="text-neutral-800">STATE: LOGGED</span>
+                                </div>
+
+                                <h2 class="text-base font-bold text-white mb-3 leading-tight group-hover:text-red-500 transition-colors line-clamp-2 min-h-[2.5rem]">
+                                    ${bundle.title}
+                                </h2>
+                                
+                                <p class="text-neutral-500 text-[10px] leading-relaxed line-clamp-2 mb-6 font-sans italic border-l border-neutral-800 pl-3">
+                                    ${bundle.description || 'Metadata analysis in progress...'}
+                                </p>
+
+                                <div class="mt-auto pt-5 flex justify-between items-end border-t border-neutral-900/50">
+                                    <div class="flex flex-col">
+                                        <span class="text-[8px] text-neutral-600 uppercase font-bold tracking-widest">Logged on</span>
+                                        <span class="text-[10px] text-neutral-400 font-mono">${pubDate.toLocaleDateString('fr-FR')}</span>
+                                    </div>
+                                    <a href="${bundle.link}" target="_blank" class="px-4 py-2 bg-neutral-900 border border-neutral-800 text-red-500 text-[9px] font-bold uppercase tracking-widest hover:bg-red-600 hover:text-black hover:border-red-600 transition-all">
+                                        Open
+                                    </a>
                                 </div>
                             </div>
                         </article>
@@ -147,15 +197,21 @@
                     container.innerHTML += card;
                 });
 
-                document.getElementById('last-scan-time').textContent = new Date().toLocaleString();
+                document.getElementById('last-scan-time').textContent = new Date().toLocaleString('fr-FR');
 
             } catch (err) {
-                console.error(err);
-                document.getElementById('bundles').innerHTML = `<div class="col-span-full py-10 text-red-500 text-center font-mono">CRITICAL ERROR: DB_FILE_NOT_FOUND</div>`;
+                console.error("DB Error:", err);
+                container.innerHTML = `
+                    <div class="col-span-full py-20 text-center border border-red-900/30 bg-red-900/5">
+                        <p class="text-red-500 font-bold text-xs uppercase tracking-[0.3em]">Erreur de lecture de la base de données</p>
+                        <p class="text-neutral-700 text-[9px] mt-2 font-mono">Verify bundles_db.json existence</p>
+                    </div>
+                `;
             }
         }
 
-        loadArchive();
+        // Initialize archive load
+        fetchBundles();
     </script>
 </body>
 </html>
