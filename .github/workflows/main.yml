@@ -1,38 +1,27 @@
 name: Update Software RSS
-
 on:
   schedule:
     - cron: '0 */12 * * *'
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
           cache: 'pip'
-
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 feedgen tinydb
-
+        run: pip install requests beautifulsoup4 feedgen
       - name: Run Scraper
         run: python scraper.py
-
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          if ! git diff --staged --quiet; then
-            git commit -m "Auto-update: RSS Feed & Archive $(date +'%Y-%m-%d %H:%M')"
-            git push
-          fi
+          git add software_feed.xml
+          git commit -m "Auto-update: RSS Feed" || exit 0
+          git push
