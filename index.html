@@ -3,130 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darkroom State // Surveillance Archive</title>
+    <title>Darkroom State // Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #0a0a0a;
-            --accent-red: #ef4444; 
-            --text-dim: #525252;
-        }
-
-        body {
-            background-color: var(--bg-color);
-            color: #e5e5e5;
-            font-family: 'JetBrains Mono', monospace;
-            overflow-x: hidden;
-        }
-
-        /* CRT Scanline & Grain Effect */
+        :root { --bg: #0a0a0a; --red: #ef4444; --border: #262626; }
+        body { background: var(--bg); color: #e5e5e5; font-family: 'JetBrains Mono', monospace; overflow-x: hidden; }
         .crt-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
                         linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 2px 100%;
-            pointer-events: none; z-index: 100;
+            background-size: 100% 3px, 2px 100%; pointer-events: none; z-index: 100;
         }
-
-        .bundle-card {
-            background: #111;
-            border: 1px solid #262626;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .bundle-card:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-red);
-            box-shadow: 0 15px 30px -15px rgba(239, 68, 68, 0.4);
-        }
-
-        .badge-new {
-            background: var(--accent-red);
-            color: black;
-            animation: pulse-red 2s infinite;
-        }
-
-        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .bundle-card { background: #111; border: 1px solid var(--border); transition: 0.3s; }
+        .bundle-card:hover { border-color: var(--red); transform: translateY(-5px); }
+        .badge-new { background: var(--red); color: black; font-size: 8px; font-weight: 900; padding: 2px 5px; }
     </style>
 </head>
-<body class="min-h-screen p-6 md:p-12">
+<body class="p-6 md:p-12">
     <div class="crt-overlay"></div>
-
     <div class="max-w-7xl mx-auto relative z-10">
-        <header class="flex flex-col lg:flex-row justify-between items-end border-b border-neutral-900 pb-10 mb-12 gap-6">
+        <header class="flex justify-between items-end border-b border-neutral-900 pb-10 mb-12">
             <div>
-                <h1 class="text-5xl font-bold tracking-tighter text-white mb-2 uppercase">
-                    Darkroom <span class="text-red-600">State</span>
-                </h1>
-                <p class="text-neutral-600 text-[10px] uppercase tracking-[0.4em]">
-                    Archive de surveillance // n° <span id="bundle-count" class="text-red-500">00</span>
-                </p>
+                <h1 class="text-4xl font-bold tracking-tighter uppercase">Darkroom <span class="text-red-600">State</span></h1>
+                <p class="text-neutral-600 text-[9px] uppercase tracking-[0.4em]">Archive Signal: <span id="status" class="text-green-500">Scanning</span></p>
             </div>
-
-            <div class="flex items-center gap-6">
-                <div class="border border-neutral-800 bg-neutral-900/30 px-5 py-3 rounded flex items-center gap-4">
-                    <div class="text-right">
-                        <span id="date-display" class="block text-neutral-600 text-[10px] tracking-widest font-bold">0000.00.00</span>
-                        <span id="time-display" class="block text-white font-bold text-xl leading-none mt-1">00:00:00</span>
-                    </div>
-                    <div class="w-[2px] h-10 bg-red-600/40"></div>
-                </div>
-                <a href="software_feed.xml" class="text-[10px] font-bold text-neutral-500 border border-neutral-800 px-6 py-4 rounded uppercase tracking-widest hover:text-red-500 transition-all">RSS</a>
-            </div>
+            <div id="clock" class="text-right font-bold text-xl text-neutral-500">00:00:00</div>
         </header>
 
-        <div id="bundles-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <div class="col-span-full py-40 text-center text-neutral-800 uppercase tracking-widest animate-pulse">Scan en cours...</div>
-        </div>
-
-        <footer class="mt-32 border-t border-neutral-900 pt-10 text-center">
-            <p class="text-neutral-700 text-[9px] uppercase tracking-[0.4em]">System Active • last_exposure: <span id="last-scan" class="text-neutral-500">---</span></p>
-        </footer>
+        <div id="bundles-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            </div>
     </div>
 
     <script>
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('date-display').textContent = now.toISOString().split('T')[0].replace(/-/g, '.');
-            document.getElementById('time-display').textContent = now.toLocaleTimeString('fr-FR', {hour12:false});
-        }
-        setInterval(updateClock, 1000); updateClock();
+        // Update Clock
+        setInterval(() => {
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString('fr-FR', {hour12:false});
+        }, 1000);
 
-        async function loadData() {
+        async function loadArchive() {
+            const container = document.getElementById('bundles-container');
             try {
                 const res = await fetch('bundles_db.json');
+                if (!res.ok) throw new Error("Offline");
                 const data = await res.json();
-                const bundles = Object.values(data._default).sort((a,b) => new Date(b.published_at) - new Date(a.published_at));
-                
-                const container = document.getElementById('bundles-container');
-                document.getElementById('bundle-count').textContent = bundles.length.toString().padStart(2, '0');
-                container.innerHTML = "";
-
-                bundles.forEach(b => {
-                    const isNew = (new Date() - new Date(b.published_at)) < (48 * 60 * 60 * 1000);
-                    container.innerHTML += `
-                        <article class="bundle-card group flex flex-col h-full overflow-hidden">
-                            <div class="relative aspect-video bg-black overflow-hidden border-b border-neutral-900">
-                                <img src="${b.image}" class="object-cover w-full h-full opacity-30 group-hover:opacity-100 group-hover:scale-105 transition duration-700 grayscale group-hover:grayscale-0">
-                                ${isNew ? '<span class="absolute top-3 left-3 badge-new px-2 py-0.5 text-[8px] font-black uppercase">New Entry</span>' : ''}
-                                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-                            </div>
-                            <div class="p-6 flex flex-col flex-grow">
-                                <span class="text-[8px] text-neutral-700 font-bold mb-2 uppercase">ID: ${b.id.substring(0,10)}</span>
-                                <h2 class="text-base font-bold text-white mb-3 leading-tight group-hover:text-red-500 transition-colors">${b.title}</h2>
-                                <p class="text-neutral-500 text-[10px] line-clamp-2 mb-6 italic border-l border-neutral-800 pl-3">${b.description}</p>
-                                <div class="mt-auto pt-5 flex justify-between items-end border-t border-neutral-900/50">
-                                    <span class="text-[9px] text-neutral-600 font-mono">${new Date(b.published_at).toLocaleDateString()}</span>
-                                    <a href="${b.link}" target="_blank" class="text-[10px] text-red-500 font-bold uppercase tracking-widest hover:underline">Open</a>
-                                </div>
-                            </div>
-                        </article>`;
-                });
-                document.getElementById('last-scan').textContent = new Date().toLocaleTimeString();
-            } catch (e) { console.error(e); }
+                render(Object.values(data._default));
+            } catch (e) {
+                console.warn("Using Mock Data - Run through a server to use real JSON.");
+                document.getElementById('status').innerText = "Simulation Mode";
+                document.getElementById('status').className = "text-orange-500";
+                render([
+                    { id: "demo-1", title: "PROXMOX AUTOMATION", image: "https://hb.imgix.net/de5f6905c6b2ae49bbc65b51baa2920a99978b50.png", description: "System monitoring tools for homelabs.", published_at: new Date().toISOString(), link: "#" },
+                    { id: "demo-2", title: "N8N WORKFLOWS", image: "https://hb.imgix.net/de5f6905c6b2ae49bbc65b51baa2920a99978b50.png", description: "Automation blueprints for developers.", published_at: new Date().toISOString(), link: "#" }
+                ]);
+            }
         }
-        loadData();
+
+        function render(items) {
+            const container = document.getElementById('bundles-container');
+            container.innerHTML = items.map(b => `
+                <div class="bundle-card flex flex-col h-full overflow-hidden">
+                    <div class="relative aspect-video bg-black">
+                        <img src="${b.image}" class="object-cover w-full h-full opacity-40 hover:opacity-100 transition duration-700 grayscale hover:grayscale-0">
+                        <div class="absolute top-2 left-2"><span class="badge-new">LOGGED</span></div>
+                    </div>
+                    <div class="p-5 flex-grow">
+                        <span class="text-[8px] text-neutral-700 font-bold uppercase">${b.id}</span>
+                        <h2 class="text-sm font-bold mt-2 mb-4 group-hover:text-red-500">${b.title}</h2>
+                        <p class="text-[10px] text-neutral-500 italic mb-6">${b.description}</p>
+                        <a href="${b.link}" target="_blank" class="mt-auto block text-center py-2 border border-neutral-800 text-red-500 text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-black transition">Open Archive</a>
+                    </div>
+                </div>
+            `).join('');
+        }
+        loadArchive();
     </script>
 </body>
 </html>
