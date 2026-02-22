@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from tinydb import TinyDB, Query
 
 def scrape_humble_software():
-    print("📸 Initializing Darkroom Scan...")
+    print("📸 INITIALIZING SCAN: Accessing Humble Bundle Software...")
     url = "https://www.humblebundle.com/software"
     db = TinyDB('bundles_db.json')
     Bundle = Query()
@@ -21,14 +21,19 @@ def scrape_humble_software():
         soup = BeautifulSoup(response.text, 'html.parser')
         
         script_tag = soup.find('script', id='landingPage-json-data')
+        if not script_tag:
+            print("❌ ERROR: Could not find data source.")
+            return
+
         json_data = json.loads(script_tag.string)
         products = json_data['data']['software']['mosaic'][0]['products']
 
+        # RSS Feed Setup
         fg = FeedGenerator()
         fg.id(url)
         fg.title('Humble Software Bundles')
         fg.link(href=url, rel='alternate')
-        fg.description('Latest software offers from Humble Bundle')
+        fg.description('Latest software offers tracked by Darkroom State')
         fg.lastBuildDate(datetime.now(timezone.utc))
 
         for item in products:
@@ -38,12 +43,11 @@ def scrape_humble_software():
             img = item.get('tile_image')
             desc = item.get('short_marketing_blurb', 'New bundle detected.')
 
-            # Check if we already have this in the archive
+            # TinyDB Logic: Archive and Persistence
             existing = db.search(Bundle.id == unique_id)
             
             if not existing:
                 pub_date = datetime.now(timezone.utc).isoformat()
-                # Store EVERYTHING the UI needs
                 db.insert({
                     'id': unique_id,
                     'title': title,
@@ -52,11 +56,11 @@ def scrape_humble_software():
                     'description': desc,
                     'published_at': pub_date
                 })
-                print(f"➕ New entry exposed: {title}")
+                print(f"➕ NEW NEGATIVE DEVELOPED: {title}")
             else:
                 pub_date = existing[0]['published_at']
 
-            # Update RSS Feed
+            # Add to RSS
             fe = fg.add_entry()
             fe.id(unique_id)
             fe.title(title)
@@ -65,10 +69,10 @@ def scrape_humble_software():
             fe.published(datetime.fromisoformat(pub_date))
 
         fg.rss_file('software_feed.xml')
-        print(f"✔️ Scan complete. {len(products)} items in current archive.")
+        print(f"✔️ SCAN COMPLETE: {len(products)} items indexed.")
 
     except Exception as e:
-        print(f"❌ SCAN ERROR: {str(e)}")
+        print(f"❌ SYSTEM FAILURE: {str(e)}")
 
 if __name__ == "__main__":
     scrape_humble_software()
