@@ -3,80 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Darkroom State // Tracker</title>
+    <title>Humble Software Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0a0a0a; --red: #ef4444; --border: #262626; }
-        body { background: var(--bg); color: #e5e5e5; font-family: 'JetBrains Mono', monospace; overflow-x: hidden; }
-        .crt-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 2px 100%; pointer-events: none; z-index: 100;
-        }
-        .bundle-card { background: #111; border: 1px solid var(--border); transition: 0.3s; }
-        .bundle-card:hover { border-color: var(--red); transform: translateY(-5px); }
-        .badge-new { background: var(--red); color: black; font-size: 8px; font-weight: 900; padding: 2px 5px; }
+        :root { --bg-color: #0a0a0a; --card-bg: #171717; --accent-red: #ef4444; --text-main: #e5e5e5; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: 'JetBrains Mono', monospace; }
+        .bundle-card { background: var(--card-bg); border: 1px solid #333; transition: all 0.3s ease; position: relative; }
+        .bundle-card:hover { border-color: var(--accent-red); box-shadow: 0 10px 30px -10px rgba(239, 68, 68, 0.3); }
+        .badge-film { background: var(--accent-red); color: black; font-weight: bold; font-size: 0.75rem; padding: 2px 8px; text-transform: uppercase; }
     </style>
 </head>
 <body class="p-6 md:p-12">
-    <div class="crt-overlay"></div>
-    <div class="max-w-7xl mx-auto relative z-10">
-        <header class="flex justify-between items-end border-b border-neutral-900 pb-10 mb-12">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex flex-col lg:flex-row justify-between items-end border-b border-neutral-800 pb-6 mb-12 gap-6">
             <div>
-                <h1 class="text-4xl font-bold tracking-tighter uppercase">Darkroom <span class="text-red-600">State</span></h1>
-                <p class="text-neutral-600 text-[9px] uppercase tracking-[0.4em]">Archive Signal: <span id="status" class="text-green-500">Scanning</span></p>
+                <h1 class="text-4xl font-bold tracking-tighter text-white mb-2">DARKROOM <span class="text-red-500">TRACKER</span></h1>
+                <p class="text-neutral-500 text-sm uppercase tracking-widest">Surveillance // Humble Bundle</p>
             </div>
-            <div id="clock" class="text-right font-bold text-xl text-neutral-500">00:00:00</div>
+            <div id="clock" class="text-white font-bold text-xl tracking-tight">00:00:00</div>
         </header>
 
-        <div id="bundles-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            </div>
+        <div id="bundles" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="col-span-full text-center py-32 text-neutral-600">SCANNING...</div>
+        </div>
     </div>
 
     <script>
-        // Update Clock
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString('fr-FR', {hour12:false});
-        }, 1000);
+        setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 1000);
 
-        async function loadArchive() {
-            const container = document.getElementById('bundles-container');
-            try {
-                const res = await fetch('bundles_db.json');
-                if (!res.ok) throw new Error("Offline");
-                const data = await res.json();
-                render(Object.values(data._default));
-            } catch (e) {
-                console.warn("Using Mock Data - Run through a server to use real JSON.");
-                document.getElementById('status').innerText = "Simulation Mode";
-                document.getElementById('status').className = "text-orange-500";
-                render([
-                    { id: "demo-1", title: "PROXMOX AUTOMATION", image: "https://hb.imgix.net/de5f6905c6b2ae49bbc65b51baa2920a99978b50.png", description: "System monitoring tools for homelabs.", published_at: new Date().toISOString(), link: "#" },
-                    { id: "demo-2", title: "N8N WORKFLOWS", image: "https://hb.imgix.net/de5f6905c6b2ae49bbc65b51baa2920a99978b50.png", description: "Automation blueprints for developers.", published_at: new Date().toISOString(), link: "#" }
-                ]);
-            }
-        }
+        fetch('software_feed.xml')
+            .then(res => res.text())
+            .then(data => {
+                const parser = new DOMParser();
+                const xml = parser.parseFromString(data, "text/xml");
+                const items = xml.querySelectorAll("item");
+                const container = document.getElementById('bundles');
+                container.innerHTML = "";
 
-        function render(items) {
-            const container = document.getElementById('bundles-container');
-            container.innerHTML = items.map(b => `
-                <div class="bundle-card flex flex-col h-full overflow-hidden">
-                    <div class="relative aspect-video bg-black">
-                        <img src="${b.image}" class="object-cover w-full h-full opacity-40 hover:opacity-100 transition duration-700 grayscale hover:grayscale-0">
-                        <div class="absolute top-2 left-2"><span class="badge-new">LOGGED</span></div>
-                    </div>
-                    <div class="p-5 flex-grow">
-                        <span class="text-[8px] text-neutral-700 font-bold uppercase">${b.id}</span>
-                        <h2 class="text-sm font-bold mt-2 mb-4 group-hover:text-red-500">${b.title}</h2>
-                        <p class="text-[10px] text-neutral-500 italic mb-6">${b.description}</p>
-                        <a href="${b.link}" target="_blank" class="mt-auto block text-center py-2 border border-neutral-800 text-red-500 text-[9px] uppercase tracking-widest hover:bg-red-600 hover:text-black transition">Open Archive</a>
-                    </div>
-                </div>
-            `).join('');
-        }
-        loadArchive();
+                items.forEach(item => {
+                    const title = item.querySelector("title").textContent;
+                    const link = item.querySelector("link").textContent;
+                    const rawDesc = item.querySelector("description").textContent;
+                    const imgMatch = rawDesc.match(/src="([^"]+)"/);
+                    const imgSrc = imgMatch ? imgMatch[1] : '';
+
+                    container.innerHTML += `
+                        <article class="bundle-card flex flex-col h-full">
+                            <div class="relative aspect-video bg-neutral-900 border-b border-neutral-800">
+                                <img src="${imgSrc}" class="object-cover w-full h-full opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition duration-700">
+                                <div class="absolute top-2 left-2"><span class="badge-film">DETECTED</span></div>
+                            </div>
+                            <div class="p-5 flex-grow">
+                                <h2 class="text-base font-bold text-white mb-4 line-clamp-2">${title}</h2>
+                                <a href="${link}" target="_blank" class="block w-full text-center py-2 border border-neutral-700 hover:bg-red-500 hover:text-black transition uppercase text-[10px] font-bold">Open</a>
+                            </div>
+                        </article>`;
+                });
+            });
     </script>
 </body>
 </html>
